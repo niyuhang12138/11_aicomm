@@ -15,33 +15,19 @@ permissions:
 
 env:
   SUBDIRS: chat chatapp/src-tauri
-  CARGO_TERM_COLOR: always
 
 jobs:
-  build-unix:
+  build-rust:
     strategy:
-      fail-fast: false
       matrix:
-        config:
-          - {
-              os: ubuntu-latest,
-              target: x86_64-unknown-linux-gnu,
-              packages: "javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf",
-            }
-          - {
-              os: macos-latest,
-              target: x86_64-apple-darwin,
-              packages: "gtk+3 webkit2gtk librsvg",
-            }
-    runs-on: ${{ matrix.config.os }}
+        platform: [ubuntu-latest, windows-latest] # 添加 Windows 平台
+    runs-on: ${{ matrix.platform }}
+
     services:
       postgres:
-        image: postgres:14.5
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: chatapp_test
-          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -49,8 +35,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          --health-start-period 20s
-          -e POSTGRES_HOST_AUTH_METHOD=trust
 
     steps:
       - uses: actions/checkout@v4
@@ -58,83 +42,91 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Setup Postgres (macOS)
-        if: matrix.config.os == 'macos-latest'
+      # Windows 依赖安装
+      - name: Install Windows dependencies
+        if: matrix.platform == 'windows-latest'
         run: |
-          brew install postgresql@14
-          brew services start postgresql@14
-          sleep 5
-          psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres'"
-          psql postgres -c "CREATE DATABASE chatapp_test OWNER postgres"
+          # 安装 WebView2 运行时
+          curl -L -o webview2.exe https://go.microsoft.com/fwlink/p/?LinkId=2124703
+          Start-Process webview2.exe -ArgumentList "/silent /install" -Wait
 
+          # 安装 Visual Studio 构建工具
+          choco install visualstudio2022-workload-vctools -y
+
+      # Linux 依赖安装（保持原样）
       - name: Install Linux dependencies
-        if: matrix.config.os == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ${{ matrix.config.packages }}
-
-      - name: Install macOS dependencies
-        if: matrix.config.os == 'macos-latest'
-        run: |
-          brew install ${{ matrix.config.packages }}
+          sudo apt-get install -y \
+            javascriptcoregtk-4.1 \
+            libsoup-3.0 \
+            webkit2gtk-4.1 \
+            libgtk-3-dev \
+            libsoup-3.0-dev
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.config.target }}
-          components: rustfmt, clippy, llvm-tools-preview
+        run: |
+          rustup toolchain install stable --component llvm-tools-preview
+          # Windows 需要添加 target
+          if [ "${{ matrix.platform }}" == "windows-latest" ]; then
+            rustup target add x86_64-pc-windows-msvc
+          fi
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
 
-      - name: Install nextest
+      - name: install nextest
         uses: taiki-e/install-action@nextest
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.config.target }}
+          key: ${{ matrix.platform }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Check code format
-        shell: bash
+      # 跨平台构建步骤
+      - name: Build and test
         run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo fmt --all -- --check
-            cd $GITHUB_WORKSPACE
+          # Windows 使用不同的路径分隔符
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            SUBDIRS=$(echo "${{ env.SUBDIRS }}" | tr ' ' ',')
+            IFS=',' read -ra dirs <<< "$SUBDIRS"
+          else
+            IFS=' ' read -ra dirs <<< "${{ env.SUBDIRS }}"
+          fi
+
+          for dir in "${dirs[@]}"; do
+            echo "Processing $dir"
+            cd "$dir"
+
+            # 公共步骤
+            cargo fmt --all -- --check
+            cargo check --all
+            cargo clippy --all-targets --all-features --tests --benches -- -D warnings
+
+            # Windows 需要特别处理
+            if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+              # 设置 Windows 构建环境变量
+              export RUSTFLAGS="-C target-feature=+crt-static"
+              cargo nextest run --all-features --no-default-features
+              cargo build --release --target x86_64-pc-windows-msvc
+            else
+              cargo nextest run --all-features
+              cargo build --release
+            fi
+
+            cd ..
           done
 
-      - name: Check the package for errors
-        shell: bash
+      # Windows 打包步骤
+      - name: Package Windows artifacts
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
         run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo check --all --target ${{ matrix.config.target }}
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Lint rust sources
+          mkdir -p release
+          cd chatapp/src-tauri
+          cargo tauri build --target x86_64-pc-windows-msvc --verbose
+          cp target/x86_64-pc-windows-msvc/release/*.msi ../../release/
+          cp target/x86_64-pc-windows-msvc/release/*.exe ../../release/
         shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo clippy --all-targets --all-features --tests --benches --target ${{ matrix.config.target }} -- -D warnings
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Execute rust tests
-        shell: bash
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/chatapp_test
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo nextest run --all-features --target ${{ matrix.config.target }}
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Build release binary
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo build --release --target ${{ matrix.config.target }}
-            cd $GITHUB_WORKSPACE
-          done
 
       - name: Generate a changelog
         uses: orhun/git-cliff-action@v2
@@ -151,85 +143,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           body: ${{ steps.git-cliff.outputs.content }}
-          draft: true
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: x86_64-pc-windows-msvc
-
-      - name: Check code format
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo fmt --all -- --check
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Check the package for errors
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo check --all --target x86_64-pc-windows-msvc
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Lint rust sources
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo clippy --all-targets --all-features --tests --benches --target x86_64-pc-windows-msvc -- -D warnings
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Execute rust tests
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo nextest run --all-features --target x86_64-pc-windows-msvc
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Build release binary
-        shell: bash
-        run: |
-          for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo build --release --target x86_64-pc-windows-msvc
-            cd $GITHUB_WORKSPACE
-          done
-
-      - name: Generate a changelog
-        uses: orhun/git-cliff-action@v2
-        id: git-cliff
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          config: cliff.toml
-          args: -vv --latest --strip header
-        env:
-          OUTPUT: CHANGES.md
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body: ${{ steps.git-cliff.outputs.content }}
-          draft: true
+          files: |
+            release/*.msi
+            release/*.exe
+            target/release/*.deb  # Linux 包
+            target/release/*.app  # macOS 包
