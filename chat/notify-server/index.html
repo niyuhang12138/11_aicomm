@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Hello World!</h1>
+    <script>
+      let token =
+        "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NDA2NTM4NTEsImV4cCI6MTc0MTI1ODY1MSwibmJmIjoxNzQwNjUzODUxLCJpc3MiOiJjaGF0X3NlcnZlciIsImF1ZCI6ImNoYXRfc2VydmVyIiwiaWQiOjEsIndzX2lkIjoxLCJ3c19uYW1lIjoiY2hhdGFwcCIsImZ1bGxuYW1lIjoiTnloIiwiZW1haWwiOiJueWhAY2hhdGFwcC5jb20iLCJjcmVhdGVkX2F0IjoiMjAyNS0wMi0yNlQwMTozNjo1MC43MjA4NDhaIn0.exTpPMLeJ0Wb1wwS7hh_N3WhMuJmB0W-EJlqwkQzzhhreyuyehnrZsYKoFiDm8cxSxOhIj0-Ctimsi7H111IBQ";
+
+      let source = new EventSource(`/events?access_token=${token}`);
+      source.onopen = function (event) {
+        console.log("sse open");
+      };
+      source.onmessage = function (event) {
+        console.log("Got:", event.data);
+      };
+      source.addEventListener("NewChat", function (event) {
+        console.log("NewChat:", event.data);
+      });
+
+      source.addEventListener("AddToChat", function (event) {
+        console.log("AddToChat:", event.data);
+      });
+
+      source.addEventListener("RemoveFromChat", function (event) {
+        console.log("RemoveFromChat:", event.data);
+      });
+
+      source.addEventListener("NewMessage", function (event) {
+        console.log("NewMessage:", event.data);
+      });
+    </script>
+  </body>
+</html>
