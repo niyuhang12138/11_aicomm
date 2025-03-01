@@ -22,10 +22,9 @@ jobs:
       matrix:
         platform: [ubuntu-latest, windows-latest] # 添加 Windows 平台
     runs-on: ${{ matrix.platform }}
-
     services:
       postgres:
-        image: postgres:17
+        image: postgres:14.5
         env:
           POSTGRES_PASSWORD: postgres
         ports:
