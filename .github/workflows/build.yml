@@ -36,20 +36,36 @@ jobs:
     runs-on: ${{ matrix.config.os }}
     services:
       postgres:
-        image: postgres:17
+        image: postgres:14.5
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
           POSTGRES_DB: chatapp_test
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 20s
+          -e POSTGRES_HOST_AUTH_METHOD=trust
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+
+      - name: Setup Postgres (macOS)
+        if: matrix.config.os == 'macos-latest'
+        run: |
+          brew install postgresql@14
+          brew services start postgresql@14
+          sleep 5
+          psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres'"
+          psql postgres -c "CREATE DATABASE chatapp_test OWNER postgres"
 
       - name: Install Linux dependencies
         if: matrix.config.os == 'ubuntu-latest'
