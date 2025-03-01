@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }} # 定义作业运行的操作系统
     services:
       postgres:
-        image: postgres:17
+        image: postgres:14.5
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -111,7 +111,7 @@ jobs:
       # 上传macOS aarch64平台的构建产物
       - name: Upload artifact (macOS aarch64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'aarch64'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v2
         with:
           name: macos-latest-heaven-aarch64
           path: target/release/heaven
