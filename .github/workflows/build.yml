@@ -22,13 +22,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-latest, macos-latest]
-        include:
-          - platform: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.platform }}
+        config:
+          - {
+              os: ubuntu-latest,
+              target: x86_64-unknown-linux-gnu,
+              packages: "javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf",
+            }
+          - {
+              os: macos-latest,
+              target: x86_64-apple-darwin,
+              packages: "gtk+3 webkit2gtk librsvg",
+            }
+    runs-on: ${{ matrix.config.os }}
     services:
       postgres:
         image: postgres:17
@@ -46,45 +51,21 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Install dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Install Linux dependencies
+        if: matrix.config.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y ${{ matrix.config.packages }}
 
-      - name: Install dependencies (macOS)
-        if: matrix.platform == 'macos-latest'
+      - name: Install macOS dependencies
+        if: matrix.config.os == 'macos-latest'
         run: |
-          brew install gtk+3 webkit2gtk librsvg
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          run_install: false
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - uses: actions/cache@v3
-        name: Setup pnpm cache
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          brew install ${{ matrix.config.packages }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.config.target }}
           components: rustfmt, clippy, llvm-tools-preview
 
       - name: Install cargo-llvm-cov
@@ -95,16 +76,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.target }}
-          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
-
-      - name: Install frontend dependencies
-        working-directory: chatapp
-        run: pnpm install
-
-      - name: Build frontend
-        working-directory: chatapp
-        run: pnpm build
+          key: ${{ matrix.config.target }}
 
       - name: Check code format
         shell: bash
@@ -118,7 +90,7 @@ jobs:
         shell: bash
         run: |
           for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo check --all --target ${{ matrix.target }}
+            cd $dir && cargo check --all --target ${{ matrix.config.target }}
             cd $GITHUB_WORKSPACE
           done
 
@@ -126,7 +98,7 @@ jobs:
         shell: bash
         run: |
           for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo clippy --all-targets --all-features --tests --benches --target ${{ matrix.target }} -- -D warnings
+            cd $dir && cargo clippy --all-targets --all-features --tests --benches --target ${{ matrix.config.target }} -- -D warnings
             cd $GITHUB_WORKSPACE
           done
 
@@ -136,7 +108,7 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/chatapp_test
         run: |
           for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo nextest run --all-features --target ${{ matrix.target }}
+            cd $dir && cargo nextest run --all-features --target ${{ matrix.config.target }}
             cd $GITHUB_WORKSPACE
           done
 
@@ -144,7 +116,7 @@ jobs:
         shell: bash
         run: |
           for dir in ${{ env.SUBDIRS }}; do
-            cd $dir && cargo build --release --target ${{ matrix.target }}
+            cd $dir && cargo build --release --target ${{ matrix.config.target }}
             cd $GITHUB_WORKSPACE
           done
 
@@ -158,39 +130,90 @@ jobs:
         env:
           OUTPUT: CHANGES.md
 
-      - name: Package application
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          cd chatapp/src-tauri && cargo tauri build
-          cd $GITHUB_WORKSPACE
-
-      - name: Prepare release artifacts
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          mkdir -p release-artifacts
-          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-            cp chatapp/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi release-artifacts/
-          elif [ "${{ matrix.platform }}" = "macos-latest" ]; then
-            cp chatapp/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg release-artifacts/
-          else
-            cp chatapp/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage release-artifacts/
-            cp chatapp/src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb release-artifacts/
-          fi
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+      - name: Release
+        uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: chatapp-${{ matrix.platform }}
-          path: release-artifacts/*
-          if-no-files-found: error
+          body: ${{ steps.git-cliff.outputs.content }}
+          draft: true
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: x86_64-pc-windows-msvc
+
+      - name: Check code format
+        shell: bash
+        run: |
+          for dir in ${{ env.SUBDIRS }}; do
+            cd $dir && cargo fmt --all -- --check
+            cd $GITHUB_WORKSPACE
+          done
+
+      - name: Check the package for errors
+        shell: bash
+        run: |
+          for dir in ${{ env.SUBDIRS }}; do
+            cd $dir && cargo check --all --target x86_64-pc-windows-msvc
+            cd $GITHUB_WORKSPACE
+          done
+
+      - name: Lint rust sources
+        shell: bash
+        run: |
+          for dir in ${{ env.SUBDIRS }}; do
+            cd $dir && cargo clippy --all-targets --all-features --tests --benches --target x86_64-pc-windows-msvc -- -D warnings
+            cd $GITHUB_WORKSPACE
+          done
+
+      - name: Execute rust tests
+        shell: bash
+        run: |
+          for dir in ${{ env.SUBDIRS }}; do
+            cd $dir && cargo nextest run --all-features --target x86_64-pc-windows-msvc
+            cd $GITHUB_WORKSPACE
+          done
+
+      - name: Build release binary
+        shell: bash
+        run: |
+          for dir in ${{ env.SUBDIRS }}; do
+            cd $dir && cargo build --release --target x86_64-pc-windows-msvc
+            cd $GITHUB_WORKSPACE
+          done
+
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v2
+        id: git-cliff
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          config: cliff.toml
+          args: -vv --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           body: ${{ steps.git-cliff.outputs.content }}
-          files: release-artifacts/*
           draft: true
