@@ -73,7 +73,7 @@ function removeFromChat(event: MessageEvent) {
 
 function newMessage(event: MessageEvent) {
   console.log('NewMessage:', JSON.parse(event.data))
-  const new_message = JSON.parse(event.data) as Interface.IMessage
+  const new_message = JSON.parse(event.data) as IF.IMessage
   new_message.sender = users.value[new_message.sender_id]
   main_store.addMessage(new_message.chat_id, new_message)
 }

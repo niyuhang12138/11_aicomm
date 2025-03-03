@@ -92,7 +92,7 @@ const password = ref('123456')
 
 async function register() {
   try {
-    const userData: Interface.ISignup = {
+    const userData: IF.ISignup = {
       fullname: fullName.value,
       email: email.value,
       workspace: workspaceName.value,

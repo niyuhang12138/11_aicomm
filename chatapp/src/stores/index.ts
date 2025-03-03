@@ -3,13 +3,14 @@ import { defineStore } from 'pinia'
 import request from '@/service'
 import type { AxiosResponse } from 'axios'
 import { jwtDecode, type JwtPayload } from 'jwt-decode'
+import { BASE_URL } from '@/global'
 
 export const useMainStore = defineStore('main_store', () => {
   /**
    * User information
    */
 
-  const user = reactive<Interface.IUser>(
+  const user = reactive<IF.IUser>(
     localStorage.getItem('user')
       ? JSON.parse(localStorage.getItem('user')!)
       : {
@@ -20,7 +21,7 @@ export const useMainStore = defineStore('main_store', () => {
         },
   )
 
-  function setUser(state: Interface.IUser) {
+  function setUser(state: IF.IUser) {
     Object.assign(user, state)
   }
 
@@ -36,13 +37,13 @@ export const useMainStore = defineStore('main_store', () => {
   /**
    * Current workspace
    */
-  const workspace = reactive<Interface.IWorkspace>(
+  const workspace = reactive<IF.IWorkspace>(
     localStorage.getItem('workspace')
       ? JSON.parse(localStorage.getItem('workspace')!)
       : { id: 0, name: '' },
   )
 
-  function setWorkspace(new_workspace: Interface.IWorkspace) {
+  function setWorkspace(new_workspace: IF.IWorkspace) {
     Object.assign(workspace, new_workspace)
   }
 
@@ -50,11 +51,11 @@ export const useMainStore = defineStore('main_store', () => {
    * List of channels
    */
 
-  const channels = ref<Array<Interface.IChannel>>(
+  const channels = ref<Array<IF.IChannel>>(
     localStorage.getItem('channels') ? JSON.parse(localStorage.getItem('channels')!) : [],
   )
 
-  function setChannels(new_channels: Array<Interface.IChannel>) {
+  function setChannels(new_channels: Array<IF.IChannel>) {
     channels.value = new_channels
   }
 
@@ -69,10 +70,10 @@ export const useMainStore = defineStore('main_store', () => {
    */
 
   const messages = ref<{
-    [key: number]: Array<Interface.IMessage>
+    [key: number]: Array<IF.IMessage>
   }>({})
 
-  function setMessages(channel_id: number, new_messages: Array<Interface.IMessage>) {
+  function setMessages(channel_id: number, new_messages: Array<IF.IMessage>) {
     messages.value[channel_id] = new_messages
   }
 
@@ -80,17 +81,17 @@ export const useMainStore = defineStore('main_store', () => {
    * users hashmap, keyed by user ID
    */
   const users = ref<{
-    [key: number]: Interface.IUserInner
+    [key: number]: IF.IUserInner
   }>(localStorage.getItem('users') ? JSON.parse(localStorage.getItem('users')!) : {})
 
-  function setUsers(new_users: { [key: number]: Interface.IUserInner }) {
+  function setUsers(new_users: { [key: number]: IF.IUserInner }) {
     users.value = new_users
   }
 
   /**
    * active channel
    */
-  const active_channel = ref<null | Interface.IChannel>(null)
+  const active_channel = ref<null | IF.IChannel>(null)
 
   function setActiveChannel(channel_id: number) {
     // active_channel.value = channel_id
@@ -100,12 +101,12 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
-  function addChannel(channel: Interface.IChannel) {
+  function addChannel(channel: IF.IChannel) {
     channels.value.push(channel)
     messages.value[channel.id] = []
   }
 
-  function addMessage(channel_id: number, message: Interface.IMessage) {
+  function addMessage(channel_id: number, message: IF.IMessage) {
     console.log('addMessage: ---> ', message)
     if (messages.value[channel_id]) {
       messages.value[channel_id].push(message)
@@ -114,7 +115,7 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
-  function getChannelMessages(channel_id: number): Array<Interface.IMessage> {
+  function getChannelMessages(channel_id: number): Array<IF.IMessage> {
     return messages.value[channel_id] || []
   }
 
@@ -128,7 +129,7 @@ export const useMainStore = defineStore('main_store', () => {
   //   return
   // }
 
-  async function signup(data: Interface.ISignup) {
+  async function signup(data: IF.ISignup) {
     try {
       const response = await request.post('/signup', data)
       await loadState(response)
@@ -138,7 +139,7 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
-  async function signin(data: Interface.ISignin) {
+  async function signin(data: IF.ISignin) {
     try {
       const response = await request.post('/signin', data)
       await loadState(response)
@@ -152,7 +153,7 @@ export const useMainStore = defineStore('main_store', () => {
     if (!messages.value[channel_id] || messages.value[channel_id].length === 0) {
       try {
         const response = await request.get(`/chats/${channel_id}/message`)
-        let messages = response.data as Array<Interface.IMessage>
+        let messages = response.data as Array<IF.IMessage>
         messages.forEach((message) => {
           console.log(message)
           message.sender = users.value[message.sender_id] || {
@@ -169,7 +170,7 @@ export const useMainStore = defineStore('main_store', () => {
     }
   }
 
-  async function sendMessage(message: Interface.ISendMessage) {
+  async function sendMessage(message: IF.ISendMessage) {
     if (!active_channel.value) return
     const channel_id = active_channel.value!.id
     try {
@@ -180,6 +181,27 @@ export const useMainStore = defineStore('main_store', () => {
       // addMessage(channel_id, new_message)
     } catch (err) {
       console.error('sendMessage error: ---> ', err)
+      throw err
+    }
+  }
+
+  async function uploadFile(files: Array<File>): Promise<Array<IF.IFileShow>> {
+    const formData = new FormData()
+    files.forEach((file) => {
+      formData.append(file.name, file)
+    })
+    try {
+      const response = await request.post(`/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return (response.data as Array<string>).map((path) => ({
+        path: path,
+        fullpath: `${BASE_URL}${path}?access_token=${token.value}`,
+      }))
+    } catch (err) {
+      console.error('uploadFile error: ---> ', err)
       throw err
     }
   }
@@ -233,6 +255,7 @@ export const useMainStore = defineStore('main_store', () => {
     reset,
     fetchMessagesForChannel,
     sendMessage,
+    uploadFile,
   }
 })
 
@@ -257,9 +280,9 @@ async function loadState(response: AxiosResponse) {
       },
     })
 
-    const users_data = users_response.data as Array<Interface.IUserInner>
+    const users_data = users_response.data as Array<IF.IUserInner>
     const users: {
-      [key: number]: Interface.IUserInner
+      [key: number]: IF.IUserInner
     } = {}
     users_data.forEach((user) => {
       users[user.id] = user
@@ -271,7 +294,7 @@ async function loadState(response: AxiosResponse) {
       },
     })
 
-    const channels = channels_response.data as Array<Interface.IChannel>
+    const channels = channels_response.data as Array<IF.IChannel>
 
     const workspace = { id: user.ws_id, name: user.ws_name }
 

@@ -70,8 +70,8 @@ const main_store = useMainStore()
 const { user, workspace, get_channels, get_single_channels, users, active_channel } =
   storeToRefs(main_store)
 
-const filter_users = computed<Array<Interface.IUserSingleChannel>>(() => {
-  const filter_users: Array<Interface.IUserSingleChannel> = []
+const filter_users = computed<Array<IF.IUserSingleChannel>>(() => {
+  const filter_users: Array<IF.IUserSingleChannel> = []
   get_single_channels.value.forEach((channel) => {
     const id = channel.members.filter((member) => member !== user.value.id)[0]
     const new_user = users.value[id]

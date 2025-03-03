@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Manager};
 
-use crate::{config::AppConfig, utils, AppState};
+use crate::{AppState, config::AppConfig, utils};
 
 #[tauri::command]
 pub fn greet(name: &str) -> String {

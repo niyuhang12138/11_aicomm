@@ -61,7 +61,7 @@ const email = ref('')
 const password = ref('')
 
 async function login() {
-  const loginData: Interface.ISignin = {
+  const loginData: IF.ISignin = {
     email: email.value,
     password: password.value,
   }

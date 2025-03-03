@@ -1,4 +1,4 @@
-declare namespace Interface {
+declare namespace IF {
   interface ISignup {
     email: string
     fullname: string
@@ -62,6 +62,11 @@ declare namespace Interface {
   interface ISendMessage {
     content: string
     files?: Array<string>
+  }
+
+  interface IFileShow {
+    path: string
+    fullpath: string
   }
 
   interface IConfig {

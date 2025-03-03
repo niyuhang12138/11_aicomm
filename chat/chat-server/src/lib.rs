@@ -7,12 +7,12 @@ mod openapi;
 
 use anyhow::Context;
 use axum::{
+    Router,
     http::Method,
     middleware::from_fn_with_state,
     routing::{get, post},
-    Router,
 };
-use chat_core::{set_layer, verify_token, DecodingKey, EncodingKey, TokenVerify};
+use chat_core::{DecodingKey, EncodingKey, TokenVerify, set_layer, verify_token};
 pub use config::ChatConfig;
 pub use error::{AppError, ErrorOutput};
 use handlers::*;

@@ -9,19 +9,19 @@ use commands::get_app_dir;
 use commands::get_config;
 use commands::greet;
 use config::AppConfig;
+use tauri::AppHandle;
+use tauri::EventLoopMessage;
+use tauri::Manager;
+use tauri::Runtime;
 use tauri::menu::CheckMenuItem;
 use tauri::menu::Menu;
 use tauri::menu::MenuItem;
 use tauri::menu::SubmenuBuilder;
 use tauri::tray::TrayIcon;
 use tauri::tray::TrayIconBuilder;
-use tauri::AppHandle;
-use tauri::EventLoopMessage;
-use tauri::Manager;
-use tauri::Runtime;
 use tauri::{
-    webview::PageLoadPayload, App, Builder, Webview, WebviewUrl, WebviewWindowBuilder, Window,
-    WindowEvent, Wry,
+    App, Builder, Webview, WebviewUrl, WebviewWindowBuilder, Window, WindowEvent, Wry,
+    webview::PageLoadPayload,
 };
 use tauri_plugin_log::fern::colors::ColoredLevelConfig;
 use tauri_plugin_log::{Target, TargetKind};

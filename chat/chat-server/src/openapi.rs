@@ -1,13 +1,13 @@
 use crate::{
+    AppState, AuthOutput, ErrorOutput,
     handlers::*,
     models::{CreateMessage, CreateUser, ListMessage, ParamChat, SigninUser},
-    AppState, AuthOutput, ErrorOutput,
 };
 use axum::Router;
 use chat_core::{Chat, ChatType, ChatUser, Message, User, Workspace};
 use utoipa::{
-    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
     Modify, OpenApi,
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
 };
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};

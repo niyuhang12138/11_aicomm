@@ -76,6 +76,8 @@ pub struct Chat {
     pub name: Option<String>,
     pub r#type: ChatType,
     pub members: Vec<i64>,
+    #[sqlx(skip)]
+    #[serde(skip)]
     pub agents: Vec<i64>,
     pub created_at: DateTime<Utc>,
 }
@@ -86,6 +88,8 @@ pub struct Message {
     pub chat_id: i64,
     pub sender_id: i64,
     pub content: String,
+    #[sqlx(default)]
+    #[serde(skip)]
     pub modified_content: Option<String>,
     pub files: Vec<String>,
     pub created_at: DateTime<Utc>,

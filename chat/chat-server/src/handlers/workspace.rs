@@ -1,5 +1,5 @@
 use crate::{AppError, AppState};
-use axum::{extract::State, response::IntoResponse, Extension, Json};
+use axum::{Extension, Json, extract::State, response::IntoResponse};
 use chat_core::{ChatUser, User};
 
 #[utoipa::path(

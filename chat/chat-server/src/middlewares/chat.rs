@@ -34,7 +34,7 @@ mod tests {
     use super::*;
     use anyhow::Result;
     use axum::{
-        body::Body, http::StatusCode, middleware::from_fn_with_state, routing::get, Router,
+        Router, body::Body, http::StatusCode, middleware::from_fn_with_state, routing::get,
     };
     use chat_core::verify_token;
     use tower::ServiceExt;

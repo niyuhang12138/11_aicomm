@@ -1,6 +1,6 @@
 use std::{env, fs::File, path::PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]

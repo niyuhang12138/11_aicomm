@@ -2,8 +2,8 @@ use anyhow::Result;
 use chat_core::{Chat, ChatType, Message};
 use futures::StreamExt;
 use reqwest::{
-    multipart::{Form, Part},
     StatusCode,
+    multipart::{Form, Part},
 };
 use reqwest_eventsource::{Event, EventSource};
 use serde::Deserialize;

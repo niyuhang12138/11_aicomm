@@ -6,14 +6,14 @@ use core::fmt;
 
 use crate::User;
 pub use auth::verify_token;
-use axum::{middleware::from_fn, Router};
+use axum::{Router, middleware::from_fn};
 use request_id::request_id;
 use server_time::ServerTimeLayer;
 use tower::ServiceBuilder;
 use tower_http::{
+    LatencyUnit,
     compression::CompressionLayer,
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
-    LatencyUnit,
 };
 use tracing::Level;
 

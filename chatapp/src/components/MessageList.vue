@@ -22,6 +22,19 @@
           <div class="text-sm leading-relaxed break-words whitespace-pre-wrap">
             {{ message.content }}
           </div>
+          <div v-if="message.files && message.files.length > 0" class="grid grid-cols-3 gap-2 mt-2">
+            <div v-for="(file, index) in message.files" :key="index" class="relative">
+              <img
+                :src="getFileUrl(file)"
+                :class="{
+                  'h-32 object-cover cursor-pointer': true,
+                  'w-auto h-auto': enlargedImage[message.id],
+                }"
+                @click="toggleImage(message.id)"
+                alt="Uploaded file"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -32,11 +45,12 @@
 import { onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import useMainStore from '@/stores'
 import { storeToRefs } from 'pinia'
+import { BASE_URL } from '@/global'
 
 // init ...
 const main_store = useMainStore()
 
-const { getMessageForActiveChannel, active_channel } = storeToRefs(main_store)
+const { getMessageForActiveChannel, active_channel, token } = storeToRefs(main_store)
 
 watch(
   () => active_channel.value,
@@ -51,8 +65,6 @@ const formatTime = (time: string) => {
   const date = new Date(time)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
-
-const message_list = ref('')
 
 let observer: MutationObserver | null = null
 
@@ -74,6 +86,18 @@ onMounted(() => {
 onUnmounted(() => {
   observer?.disconnect()
 })
+
+const enlargedImage = ref<{
+  [key: number]: boolean
+}>({})
+
+function getFileUrl(path: string) {
+  return `${BASE_URL}${path}?access_token=${token.value}`
+}
+
+function toggleImage(message_id: number) {
+  enlargedImage.value[message_id] = !enlargedImage.value[message_id]
+}
 </script>
 
 <style scoped></style>
