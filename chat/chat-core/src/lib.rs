@@ -5,8 +5,31 @@ use chrono::{DateTime, Utc};
 pub use middlewares::*;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use thiserror::Error;
 pub use util::*;
 use utoipa::ToSchema;
+
+#[allow(async_fn_in_trait)]
+pub trait Agent: std::fmt::Debug {
+    async fn process(&self, msg: Message, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct AgentContext {}
+
+#[derive(Debug, Clone)]
+pub enum AgentDecision {
+    Modify(String),
+    Reply(String),
+    Delete,
+    None,
+}
+
+#[derive(Error, Debug)]
+pub enum AgentError {
+    #[error("Network error: {0}")]
+    Network(String),
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, PartialEq, ToSchema)]
 pub struct User {
@@ -53,6 +76,7 @@ pub struct Chat {
     pub name: Option<String>,
     pub r#type: ChatType,
     pub members: Vec<i64>,
+    pub agents: Vec<i64>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -62,6 +86,7 @@ pub struct Message {
     pub chat_id: i64,
     pub sender_id: i64,
     pub content: String,
+    pub modified_content: Option<String>,
     pub files: Vec<String>,
     pub created_at: DateTime<Utc>,
 }
