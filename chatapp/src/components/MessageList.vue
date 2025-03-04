@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import useMainStore from '@/stores'
 import { storeToRefs } from 'pinia'
 import { BASE_URL } from '@/global'
