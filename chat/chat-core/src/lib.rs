@@ -2,6 +2,7 @@ mod middlewares;
 mod util;
 
 use chrono::{DateTime, Utc};
+use jwt_simple::reexports::serde_json;
 pub use middlewares::*;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -60,9 +61,10 @@ pub struct ChatUser {
     pub email: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, sqlx::Type, ToSchema)]
+#[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, sqlx::Type, ToSchema)]
 #[sqlx(type_name = "chat_type", rename_all = "snake_case")]
 pub enum ChatType {
+    #[default]
     Single,
     Group,
     PrivateChannel,
@@ -93,6 +95,30 @@ pub struct Message {
     pub modified_content: Option<String>,
     pub files: Vec<String>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Default, ToSchema, Serialize, Deserialize, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "agent_type", rename_all = "snake_case")]
+pub enum AgentType {
+    #[serde(alias = "proxy", alias = "Proxy")]
+    #[default]
+    Proxy,
+    #[serde(alias = "replay", alias = "Reply")]
+    Reply,
+    #[serde(alias = "tap", alias = "Tap")]
+    Tap,
+}
+
+#[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
+pub struct ChatAgent {
+    pub id: i64,
+    pub chat_id: i64,
+    pub name: String,
+    pub r#type: AgentType,
+    pub prompt: String,
+    pub args: serde_json::Value, // TODO: change to custom type
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl User {

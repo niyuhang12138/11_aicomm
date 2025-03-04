@@ -15,6 +15,15 @@ pub enum AppError {
     #[error("email already exists: {0}")]
     EmailAlreadyExists(String),
 
+    #[error("create agent error: {0}")]
+    CreateAgentError(String),
+
+    #[error("update agent error: {0}")]
+    UpdateAgentError(String),
+
+    #[error("delete agent error: {0}")]
+    DeleteAgentError(String),
+
     #[error("create chat error: {0}")]
     CreateChatError(String),
 
@@ -23,6 +32,9 @@ pub enum AppError {
 
     #[error("{0}")]
     ChatFileError(String),
+
+    #[error("user {user_id} is not member of chat {chat_id}")]
+    NotChatMemberError { user_id: u64, chat_id: u64 },
 
     #[error("create message error: {0}")]
     CreateMessageError(String),
@@ -58,10 +70,14 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response<axum::body::Body> {
         let status = match self {
             AppError::EmailAlreadyExists(_) => StatusCode::CONFLICT,
+            AppError::CreateAgentError(_) => StatusCode::BAD_REQUEST,
+            AppError::UpdateAgentError(_) => StatusCode::BAD_REQUEST,
+            AppError::DeleteAgentError(_) => StatusCode::BAD_REQUEST,
             AppError::CreateChatError(_) => StatusCode::BAD_REQUEST,
             AppError::UpdateChatError(_) => StatusCode::BAD_REQUEST,
             AppError::ChatFileError(_) => StatusCode::BAD_REQUEST,
             AppError::CreateMessageError(_) => StatusCode::BAD_REQUEST,
+            AppError::NotChatMemberError { .. } => StatusCode::FORBIDDEN,
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::SqlxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::PasswordHashError(_) => StatusCode::UNPROCESSABLE_ENTITY,

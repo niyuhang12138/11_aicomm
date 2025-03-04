@@ -7,12 +7,12 @@ mod openapi;
 
 use anyhow::Context;
 use axum::{
-    Router,
     http::Method,
     middleware::from_fn_with_state,
     routing::{get, post},
+    Router,
 };
-use chat_core::{DecodingKey, EncodingKey, TokenVerify, set_layer, verify_token};
+use chat_core::{set_layer, verify_token, DecodingKey, EncodingKey, TokenVerify};
 pub use config::ChatConfig;
 pub use error::{AppError, ErrorOutput};
 use handlers::*;
@@ -59,6 +59,12 @@ pub async fn get_router(state: AppState) -> Result<Router, AppError> {
             get(list_message_handler)
                 .delete(delete_message_handler)
                 .post(send_message_handler),
+        )
+        .route(
+            "/{id}/agent",
+            get(list_agent_handler)
+                .post(create_agent_handler)
+                .patch(update_agent_handler),
         )
         .layer(from_fn_with_state(state.clone(), verify_chat))
         .route("/", get(list_chat_handler).post(create_chat_handler));
@@ -127,7 +133,7 @@ impl Debug for AppStateInner {
 #[cfg(feature = "test-util")]
 mod test_util {
     use super::*;
-    use sqlx::Executor;
+    use sqlx::{Executor, PgPool};
     use sqlx_db_tester::TestPg;
 
     impl AppState {

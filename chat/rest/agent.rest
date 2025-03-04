@@ -1,0 +1,40 @@
+# @name signin
+POST http://localhost:6688/api/signin
+Content-Type: application/json
+
+{
+    "email": "nyh@chatapp.com",
+    "password": "123456"
+}
+
+@token = {{signin.response.body.token}}
+
+### create chat agent
+POST http://localhost:6688/api/chats/1/agent
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "name": "agent X4",
+    "type": "proxy" ,
+    "prompt": "你是一个资深的地理学家, 根据用户传入的问题进行回答, 问题如果和地理相关则回答, 如果不相关则回答: 我是地理学家, 我只回答地理问题",
+    "args": {}
+}
+
+### list chat agent
+GET http://localhost:6688/api/chats/1/agent
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### update chat agent
+PATCH http://localhost:6688/api/chats/1/agent
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+    "id": 6,
+    "prompt": "abc",
+    "args": {
+        "a": 1
+    }
+}
