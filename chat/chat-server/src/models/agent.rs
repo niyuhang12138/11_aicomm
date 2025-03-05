@@ -1,5 +1,5 @@
 use crate::{AppError, AppState};
-use chat_core::{AgentType, ChatAgent};
+use chat_core::{AdapterType, AgentType, ChatAgent};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use utoipa::ToSchema;
@@ -7,6 +7,8 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Default, ToSchema, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct CreateAgent {
+    pub adapter: AdapterType,
+    pub model: String,
     pub name: String,
     pub r#type: AgentType,
     pub prompt: String,
@@ -30,12 +32,16 @@ pub struct UpdateAgent {
 
 impl CreateAgent {
     pub fn new(
+        adapter: AdapterType,
+        model: impl Into<String>,
         name: impl Into<String>,
         r#type: AgentType,
         prompt: impl Into<String>,
         args: impl Serialize,
     ) -> Self {
         Self {
+            adapter,
+            model: model.into(),
             name: name.into(),
             r#type,
             prompt: prompt.into(),
@@ -71,16 +77,19 @@ impl AppState {
             )));
         }
 
+        // TODO: check if model is supported by adapter
         let agent = sqlx::query_as(
             r#"
-            INSERT INTO chat_agents (chat_id, name, type, prompt, args)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO chat_agents (chat_id, name, type, adapter, model, prompt, args)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
             "#,
         )
         .bind(chat_id as i64)
         .bind(input.name)
         .bind(input.r#type)
+        .bind(input.adapter)
+        .bind(input.model)
         .bind(input.prompt)
         .bind(input.args)
         .fetch_one(&self.pool)
@@ -194,6 +203,8 @@ mod tests {
     async fn create_agent_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateAgent::new(
+            AdapterType::Deepseek,
+            "deepseek-chat",
             "test",
             AgentType::Proxy,
             "You are a helpful assistant",
@@ -205,6 +216,8 @@ mod tests {
             .expect("create chat failed");
 
         assert_eq!(agent.name, "test");
+        assert_eq!(agent.adapter, AdapterType::Deepseek);
+        assert_eq!(agent.model, "deepseek-chat");
         assert_eq!(agent.r#type, AgentType::Proxy);
         assert_eq!(agent.prompt, "You are a helpful assistant");
         assert_eq!(agent.args, serde_json::json!({}));
@@ -215,6 +228,8 @@ mod tests {
     async fn list_agents_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateAgent::new(
+            AdapterType::Deepseek,
+            "deepseek-chat",
             "test",
             AgentType::Proxy,
             "You are a helpful assistant",
@@ -238,6 +253,8 @@ mod tests {
         let (_tdb, state) = AppState::new_for_test().await?;
         // create an agent
         let input = CreateAgent::new(
+            AdapterType::Deepseek,
+            "deepseek-chat",
             "test",
             AgentType::Proxy,
             "You are a helpful assistant",

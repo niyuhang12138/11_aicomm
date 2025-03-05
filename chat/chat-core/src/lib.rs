@@ -12,11 +12,18 @@ use utoipa::ToSchema;
 
 #[allow(async_fn_in_trait)]
 pub trait Agent: std::fmt::Debug {
-    async fn process(&self, msg: Message, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
+    async fn process(&self, msg: &str, ctx: &AgentContext)
+        -> Result<AgentDecision, AgentError>;
 }
 
 #[derive(Debug, Clone)]
 pub struct AgentContext {}
+
+impl AgentContext {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum AgentDecision {
@@ -30,6 +37,9 @@ pub enum AgentDecision {
 pub enum AgentError {
     #[error("Network error: {0}")]
     Network(String),
+
+    #[error("{0}")]
+    AnyError(#[from] anyhow::Error),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, PartialEq, ToSchema)]
@@ -78,8 +88,6 @@ pub struct Chat {
     pub name: Option<String>,
     pub r#type: ChatType,
     pub members: Vec<i64>,
-    #[sqlx(skip)]
-    #[serde(skip)]
     pub agents: Vec<i64>,
     pub created_at: DateTime<Utc>,
 }
@@ -91,7 +99,6 @@ pub struct Message {
     pub sender_id: i64,
     pub content: String,
     #[sqlx(default)]
-    #[serde(skip)]
     pub modified_content: Option<String>,
     pub files: Vec<String>,
     pub created_at: DateTime<Utc>,
@@ -109,12 +116,22 @@ pub enum AgentType {
     Tap,
 }
 
+#[derive(Debug, Clone, Default, ToSchema, Serialize, Deserialize, PartialEq, sqlx::Type)]
+#[sqlx(type_name = "adapter_type", rename_all = "snake_case")]
+pub enum AdapterType {
+    #[default]
+    #[serde(alias = "deepseek", alias = "DeepSeek")]
+    Deepseek,
+}
+
 #[derive(Debug, Clone, FromRow, ToSchema, Serialize, Deserialize, PartialEq)]
 pub struct ChatAgent {
     pub id: i64,
     pub chat_id: i64,
     pub name: String,
     pub r#type: AgentType,
+    pub adapter: AdapterType,
+    pub model: String,
     pub prompt: String,
     pub args: serde_json::Value, // TODO: change to custom type
     pub created_at: DateTime<Utc>,

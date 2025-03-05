@@ -41,3 +41,5 @@ uuid = { version = "1.12.0", features = ["v7", "serde"] }
 chat-core = { path = "./chat-core" }
 chat-server = { path = "./chat-server" }
 notify-server = { path = "./notify-server" }
+ai-sdk = {path = "./ai-sdk"}
+dotenv = "0.15.0"

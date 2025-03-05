@@ -25,7 +25,7 @@ impl AppState {
             .await?;
 
         let chat = query_as(
-            "INSERT INTO chats (ws_id, name, type, members) VALUES ($1, $2, $3, $4) RETURNING id, ws_id, name, type, members, created_at",
+            "INSERT INTO chats (ws_id, name, type, members) VALUES ($1, $2, $3, $4) RETURNING *",
         )
         .bind(ws_id as i64)
         .bind(&input.name)
@@ -53,7 +53,7 @@ impl AppState {
             .await?;
 
         let chat: Chat = query_as(
-            "UPDATE chats SET name = $1, type = $2, members = $3 WHERE id = $4 RETURNING id, ws_id, name, type, members, created_at",
+            "UPDATE chats SET name = $1, type = $2, members = $3 WHERE id = $4 RETURNING *",
         )
         .bind(&input.name)
         .bind(chat_type)
@@ -66,37 +66,31 @@ impl AppState {
     }
 
     pub async fn delete_chat(&self, id: u64) -> Result<Chat, AppError> {
-        let chat: Chat = query_as(
-            "DELETE FROM chats WHERE id = $1 RETURNING id, ws_id, name, type, members, created_at",
-        )
-        .bind(id as i64)
-        .fetch_one(&self.pool)
-        .await?;
+        let chat: Chat = query_as("DELETE FROM chats WHERE id = $1 RETURNING *")
+            .bind(id as i64)
+            .fetch_one(&self.pool)
+            .await?;
 
         Ok(chat)
     }
 
     #[allow(dead_code)]
     pub async fn fetch_chat_all(&self, ws_id: u64, user_id: u64) -> Result<Vec<Chat>, AppError> {
-        let chats = query_as(
-            "SELECT id, ws_id, name, type, members, created_at FROM chats WHERE ws_id = $1 AND $2 = ANY(members)",
-        )
-        .bind(ws_id as i64)
-        .bind(user_id as i64)
-        .fetch_all(&self.pool)
-        .await?;
+        let chats = query_as("SELECT * FROM chats WHERE ws_id = $1 AND $2 = ANY(members)")
+            .bind(ws_id as i64)
+            .bind(user_id as i64)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(chats)
     }
 
     pub async fn get_chat_by_id(&self, chat_id: u64, ws_id: u64) -> Result<Option<Chat>, AppError> {
-        let chat = query_as(
-            "SELECT id, ws_id, name, type, members, created_at FROM chats WHERE id = $1 AND ws_id = $2",
-        )
-        .bind(chat_id as i64)
-        .bind(ws_id as i64)
-        .fetch_optional(&self.pool)
-        .await?;
+        let chat = query_as("SELECT * FROM chats WHERE id = $1 AND ws_id = $2")
+            .bind(chat_id as i64)
+            .bind(ws_id as i64)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(chat)
     }
@@ -210,12 +204,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn chat_get_by_id() -> Result<()> {
+    async fn chat_get_by_id_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let chats: Vec<Chat> =
-            query_as("SELECT id, ws_id, name, type, members, created_at FROM chats")
-                .fetch_all(&state.pool)
-                .await?;
+        let chats: Vec<Chat> = query_as("SELECT * FROM chats")
+            .fetch_all(&state.pool)
+            .await?;
         println!("{chats:?}");
         let chat = state.get_chat_by_id(1, 1).await?;
         println!("{chat:?}");

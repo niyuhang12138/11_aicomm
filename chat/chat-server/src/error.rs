@@ -1,6 +1,7 @@
 use axum::http::StatusCode;
 use axum::response::Json;
 use axum::response::{IntoResponse, Response};
+use chat_core::AgentError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use utoipa::ToSchema;
@@ -56,6 +57,9 @@ pub enum AppError {
 
     #[error("http header parse error: {0}")]
     HttpHeaderError(#[from] axum::http::header::InvalidHeaderValue),
+
+    #[error("agent error: {0}")]
+    AiAgentError(#[from] AgentError),
 }
 
 impl ErrorOutput {
@@ -84,6 +88,7 @@ impl IntoResponse for AppError {
             AppError::JwtError(_) => StatusCode::FORBIDDEN,
             AppError::HttpHeaderError(_) => StatusCode::UNPROCESSABLE_ENTITY,
             AppError::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::AiAgentError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         (status, Json(ErrorOutput::new(self.to_string()))).into_response()

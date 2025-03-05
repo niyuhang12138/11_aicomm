@@ -2,20 +2,14 @@ use anyhow::Result;
 use chat_core::{Chat, ChatType, Message};
 use futures::StreamExt;
 use reqwest::{
-    StatusCode,
     multipart::{Form, Part},
+    StatusCode,
 };
 use reqwest_eventsource::{Event, EventSource};
 use serde::Deserialize;
 use serde_json::json;
-use std::{
-    net::SocketAddr,
-    // time::Duration
-};
-use tokio::{
-    net::TcpListener,
-    // time::sleep
-};
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
 /*
 test1:
