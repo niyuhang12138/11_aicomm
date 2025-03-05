@@ -1,15 +1,15 @@
 use crate::{AppEvent, AppState};
 use axum::{
-    Extension,
     extract::State,
-    response::{Sse, sse::Event},
+    response::{sse::Event, Sse},
+    Extension,
 };
-use axum_extra::{TypedHeader, headers};
+use axum_extra::{headers, TypedHeader};
 use chat_core::User;
 use futures::stream::Stream;
 use std::{convert::Infallible, time::Duration};
 use tokio::sync::broadcast;
-use tokio_stream::{StreamExt, wrappers::BroadcastStream};
+use tokio_stream::{wrappers::BroadcastStream, StreamExt};
 use tracing::info;
 
 const CHANNEL_CAPACITY: usize = 256;

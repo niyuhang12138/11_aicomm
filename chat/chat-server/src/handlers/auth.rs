@@ -1,8 +1,8 @@
 use crate::{
-    AppError, AppState, ErrorOutput,
     models::{CreateUser, SigninUser},
+    AppError, AppState, ErrorOutput,
 };
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

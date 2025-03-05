@@ -4,17 +4,17 @@ mod notify;
 mod sse;
 
 use axum::{
-    Router,
     http::Method,
     middleware::from_fn_with_state,
     response::{Html, IntoResponse},
     routing::get,
+    Router,
 };
-use chat_core::{DecodingKey, TokenVerify, User, verify_token};
+use chat_core::{verify_token, DecodingKey, TokenVerify, User};
 pub use config::NotifyConfig;
 use dashmap::DashMap;
 use error::AppError;
-pub use notify::{AppEvent, setup_pg_listener};
+pub use notify::{setup_pg_listener, AppEvent};
 use sse::sse_handler;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::broadcast;

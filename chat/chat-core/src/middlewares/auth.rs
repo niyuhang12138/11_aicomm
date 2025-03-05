@@ -6,8 +6,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::{
+    headers::{authorization::Bearer, Authorization},
     TypedHeader,
-    headers::{Authorization, authorization::Bearer},
 };
 use serde::Deserialize;
 use tracing::warn;
@@ -70,7 +70,7 @@ mod tests {
     use super::*;
     use crate::{DecodingKey, EncodingKey};
     use anyhow::Result;
-    use axum::{Router, body::Body, middleware::from_fn_with_state, routing::get};
+    use axum::{body::Body, middleware::from_fn_with_state, routing::get, Router};
     use tower::ServiceExt;
 
     #[derive(Clone)]

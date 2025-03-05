@@ -1,9 +1,9 @@
-use crate::{AppError, AppState, models::ParamChat};
+use crate::{models::ParamChat, AppError, AppState};
 use axum::{
-    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
+    Extension, Json,
 };
 use chat_core::{Chat, User};
 

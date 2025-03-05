@@ -1,12 +1,12 @@
 use crate::{
-    AppError, AppState,
     models::{CreateAgent, UpdateAgent},
+    AppError, AppState,
 };
 use axum::{
-    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 
 /// List all agents in the chat.

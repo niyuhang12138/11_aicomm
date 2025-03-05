@@ -12,8 +12,7 @@ use utoipa::ToSchema;
 
 #[allow(async_fn_in_trait)]
 pub trait Agent: std::fmt::Debug {
-    async fn process(&self, msg: &str, ctx: &AgentContext)
-        -> Result<AgentDecision, AgentError>;
+    async fn process(&self, msg: &str, ctx: &AgentContext) -> Result<AgentDecision, AgentError>;
 }
 
 #[derive(Debug, Clone)]
