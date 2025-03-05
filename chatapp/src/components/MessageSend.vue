@@ -85,11 +85,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 async function sendMessage() {
   if (message.value.trim()) {
-    await main_store.sendMessage({
+    main_store.sendMessage({
       content: message.value,
       files: files.value.map((file) => file.path),
     })
-
     message.value = ''
     files.value = []
   }

@@ -136,7 +136,7 @@ impl AppState {
         };
 
         let messages: Vec<Message> = query_as(
-            "SELECT id, chat_id, sender_id, content, files, created_at FROM messages WHERE chat_id = $1 AND id < $2 ORDER BY id ASC LIMIT $3",
+            "SELECT * FROM messages WHERE chat_id = $1 AND id < $2 ORDER BY id ASC LIMIT $3",
         )
         .bind(chat_id as i64)
         .bind(last_id as i64)

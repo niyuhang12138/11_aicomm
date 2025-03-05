@@ -20,7 +20,11 @@
             <span class="text-xs text-gray-500">{{ formatTime(message.created_at) }}</span>
           </div>
           <div class="text-sm leading-relaxed break-words whitespace-pre-wrap">
-            {{ message.content }}
+            {{
+              message.modified_content && message.modified_content.trim() !== ''
+                ? message.modified_content
+                : message.content
+            }}
           </div>
           <div v-if="message.files && message.files.length > 0" class="grid grid-cols-3 gap-2 mt-2">
             <div v-for="(file, index) in message.files" :key="index" class="relative">

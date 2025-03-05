@@ -54,6 +54,7 @@ declare namespace IF {
     chat_id: number
     sender_id: number
     content: string
+    modified_content: string
     files: Array<string>
     created_at: string
     sender: IUserInner

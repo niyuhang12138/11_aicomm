@@ -3,7 +3,7 @@ import { BASE_URL } from '@/global'
 
 const request = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 100000,
   headers: {
     'Content-Type': 'application/json',
   },
